@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "module": "none",
+        "noImplicitAny": true,
+        "removeComments": true,
+        "sourceMap": false,
+        "outFile": "pocket.js"
+    },
+    "files": [
+        "pocket.ts"
+    ]
+}
