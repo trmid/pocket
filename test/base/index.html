@@ -8,8 +8,7 @@
     <!-- Load Pocket -->
     <script src="../../pocket.js"></script>
     <!-- Load Urchin.js for Quaternions and Vectors -->
-    <script
-        src="https://cdn.jsdelivr.net/gh/midpoint68/Urchin@documentation-and-quality-of-life/Urchin.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/midpoint68/Urchin@documentation-and-quality-of-life/Urchin.min.js"></script>
     <style>
         html,
         body {
@@ -29,7 +28,7 @@
 
     <p>
         <button onclick="pause=true;">Stop</button>
-        <button onclick="if(pause) {pause = false; draw();}">Play</button>
+        <button onclick="if(pause) {pause = false; last_frame = performance.now(); draw();}">Play</button>
     </p>
 
     <script>
@@ -38,9 +37,11 @@
         var canvas, ctx, width, height;
 
         // Animation vars
-        const count = 1200;
-        const radius = 10.0;
-        const speed = 100;
+        const count = 2500;
+        const radius = 4.0;
+        const min_speed = 0;
+        const max_speed = 200;
+        const energy_conserved = 0.99;
         const particles = [];
         var last_frame;
         var pause = false;
@@ -71,19 +72,20 @@
             // Setup Particles
             for (let i = 0; i < count; i++) {
 
+                const speed = Math.random() * (max_speed - min_speed) + min_speed;
                 particles.push({
                     pos: new Vector(
                         Math.random() * (width - radius) + radius,
                         Math.random() * (height - radius) + radius,
                         Math.random() * (depth - radius) + radius
                     ),
-                    vel: rand_unit().mult(speed)
+                    vel: rand_unit().mult(speed),
+                    speed: speed
                 });
 
             }
 
             draw();
-            // console.log(particles);
 
         };
 
@@ -92,7 +94,8 @@
             if (!pause) requestAnimationFrame(draw);
 
             const now = performance.now();
-            const t = (now - last_frame) / 1000.0; // time in sec from last frame
+            // const t = (now - last_frame) / 1000.0; // time in sec from last frame
+            const t = 30 / 1000.0;
 
             ctx.clearRect(0, 0, width, height);
 
@@ -104,52 +107,60 @@
 
                 if (p.pos.x < 0 + radius) {
                     p.pos.x = 0 + radius;
-                    p.vel.x *= -1;
+                    p.vel.x *= -energy_conserved;
                 } else if (p.pos.x > width - radius) {
                     p.pos.x = width - radius;
-                    p.vel.x *= -1;
+                    p.vel.x *= -energy_conserved;
                 }
 
                 if (p.pos.y < 0 + radius) {
                     p.pos.y = 0 + radius;
-                    p.vel.y *= -1;
+                    p.vel.y *= -energy_conserved;
                 } else if (p.pos.y > height - radius) {
                     p.pos.y = height - radius;
-                    p.vel.y *= -1;
+                    p.vel.y *= -energy_conserved;
                 }
 
                 if (p.pos.z < 0 + radius) {
                     p.pos.z = 0 + radius;
-                    p.vel.z *= -1;
+                    p.vel.z *= -energy_conserved;
                 } else if (p.pos.z > depth - radius) {
                     p.pos.z = depth - radius;
-                    p.vel.z *= -1;
+                    p.vel.z *= -energy_conserved;
                 }
 
                 for (let j = i + 1; j < particles.length; j++) {
 
-                    const p2 = particles[j];
-                    const diff = Vector.sub(p.pos, p2.pos);
-                    const dist = diff.mag();
+                    if (i != j) {
 
-                    if (dist < radius * 2) {
+                        const p2 = particles[j];
+                        const diff = Vector.sub(p.pos, p2.pos);
+                        const dist = diff.mag();
 
-                        var norm;
+                        if (dist < radius * 2) {
 
-                        if (dist != 0) {
-                            norm = diff.normalize();
-                        } else {
-                            norm = rand_unit();
+                            var norm;
+
+                            if (dist != 0) {
+                                norm = diff.normalize();
+                            } else {
+                                norm = rand_unit();
+                            }
+
+                            const temp = p.speed;
+                            p.speed = p2.speed * energy_conserved;
+                            p2.speed = temp * energy_conserved;
+
+                            p.vel = Vector.mult(norm, p.speed);
+                            p2.vel = Vector.mult(norm, -p2.speed);
+
                         }
-
-                        p.vel = Vector.mult(norm, speed);
-                        p2.vel = Vector.mult(norm, -speed);
 
                     }
 
                 }
 
-                const size = 2 * radius / Math.pow(p.pos.z + 1, 0.25);
+                const size = 1.5 * radius / Math.pow(p.pos.z + 1, 0.25);
                 ctx.fillStyle = `rgb(${Math.floor(255 * (1 - (p.pos.z / depth)))}, ${50}, ${100})`;
                 ctx.beginPath();
                 ctx.ellipse(p.pos.x, p.pos.y, size, size, 0, 0, Math.PI * 2);

@@ -1,63 +1,281 @@
-interface Vector {
-    x: number
-    y: number
-    z?: number
-}
+namespace Pocket {
 
-class SubPocket<T> {
+    export const magic_ratio = 1.9;
 
-    radius: number
-    parent: SubPocket<T> | undefined
-    pockets: SubPocket<T>[]
-    objects: T[]
-    position: Vector
+    export interface Vector {
+        x: number
+        y: number
+        z: number
+    }
 
-    constructor({
-        parent,
-        radius = 100,
-        position
-    }: {
-        parent?: SubPocket<T>
-        radius?: number,
+    export interface Particle<T> extends Vector {
+        obj: T
+        radius: number
+    }
+
+    export function sub(v0: Vector, v1: Vector) {
+        return {
+            x: v0.x - v1.x,
+            y: v0.y - v1.y,
+            z: v0.z - v1.z
+        };
+    }
+
+    export function mag(v: Vector) {
+        return Math.sqrt(Math.pow(Math.sqrt(v.x * v.x + v.y * v.y), 2) + v.z * v.z);
+    }
+
+    export class SubPocket<T> {
+
+        radius: number
+        parent: SubPocket<T> | Pocket<T>
+        pockets: SubPocket<T>[]
+        particles: Particle<T>[]
         position: Vector
-    }) {
-        this.parent = parent;
-        this.radius = radius;
-        this.pockets = new Array<SubPocket<T>>();
-        this.objects = new Array<T>();
-        this.position = position;
-    }
 
-    // Returns a function to call when the object needs to be taken out of the pocket
-    put(obj: T, radius: number, x: number, y: number, z?: number) {
-        if (radius > this.radius / 2) {
-
-            // Add object to pocket
-            this.objects.push(obj);
-
-            // Generate removal function
-            const self = this;
-            return () => {
-                return self.remove(obj);
-            };
-
-        } else {
-            // Add object to sub pocket
-            // for(){}
+        constructor({
+            parent,
+            radius,
+            position
+        }: {
+            parent: SubPocket<T> | Pocket<T>
+            radius: number,
+            position: Vector
+        }) {
+            this.parent = parent;
+            this.radius = radius;
+            this.pockets = new Array<SubPocket<T>>();
+            this.particles = new Array<Particle<T>>();
+            this.position = position;
         }
+
+        /**
+         * Places the object in this pocket or in a sub pocket of this pocket and returns a function to call to retrieve the object from the pocket. (Call to pull the object out of the pocket if being moved)
+         * 
+         * @param obj The object to store
+         * @param radius The radial influence of the object
+         * @param x The x position of the object
+         * @param y The y position of the object
+         * @param z The z position of the object
+         */
+        put(obj: T, radius: number, x: number, y: number, z = 0): (() => T) | undefined {
+            const diff = sub(this.position, { x: x, y: y, z: z });
+            const dist = mag(diff);
+            if (dist + radius < this.radius) {
+                if (radius >= this.radius / magic_ratio) {
+
+                    // Add object to the pocket
+                    this.particles.push({
+                        obj: obj,
+                        radius: radius,
+                        x: x,
+                        y: y,
+                        z: z
+                    });
+
+                    // Return retrieval function
+                    const self = this;
+                    return () => {
+                        return self.retrieve(obj);
+                    };
+
+                } else {
+
+                    // Add object to a SubPocket
+                    for (let i = 0; i < this.pockets.length; i++) {
+                        const result = this.pockets[i].put(obj, radius, x, y, z);
+                        if (result) return result;
+                    }
+
+                    // Doesn't fit in any SubPockets so we will create a new one with half the radius of this one, centered at the object's position
+                    const sp = new SubPocket<T>({
+                        parent: this,
+                        radius: this.radius / magic_ratio,
+                        position: {
+                            x: x,
+                            y: y,
+                            z: z
+                        }
+                    });
+                    this.pockets.push(sp);
+                    return sp.put(obj, radius, x, y, z);
+
+                }
+            } else {
+                return undefined;
+            }
+        }
+
+        /**
+         * Retrieves an object from this pocket if it is stored here and removes it from the pocket. The call will always return the object regardless if it exists in the pocket or not.
+         * 
+         * @param obj The object to retrieve from this pocket
+         */
+        retrieve(obj: T) {
+            this.particles = this.particles.filter(p => p.obj != obj);
+            if (this.pockets.length == 0 && this.particles.length == 0) {
+                this.parent.remove(this);
+            }
+            return obj;
+        }
+
+        /**
+         * Removes a SubPocket from this pocket.
+         * 
+         * @param sp The SubPocket to be removed
+         */
+        remove(sp: SubPocket<T>) {
+            this.pockets = this.pockets.filter(p => p != sp);
+            if (this.pockets.length == 0 && this.particles.length == 0) {
+                this.parent.remove(this);
+            }
+        }
+
+        /**
+         * Returns an array of all objects that exist wholly or partially within the given radius of the desired coordinates.
+         * 
+         * @param radius The radius of the search
+         * @param x The x position of the center of the search
+         * @param y The y position of the center of the search
+         * @param z The z position of the center of the search
+         */
+        search(radius: number, x: number, y: number, z = 0) {
+            var found = new Array<Particle<T>>();
+
+            const diff = sub(this.position, { x: x, y: y, z: z });
+            const dist = mag(diff);
+            if (dist - radius < this.radius) {
+
+                // Search this pocket's particles
+                for (let i = 0; i < this.particles.length; i++) {
+                    const p = this.particles[i];
+                    const p_diff = sub({ x: p.x, y: p.y, z: p.z }, { x: x, y: y, z: z });
+                    const p_dist = mag(p_diff);
+                    if (p_dist - radius < p.radius) {
+                        found.push(p);
+                    }
+                }
+
+                // Search this pocket's SubPockets
+                for (let i = 0; i < this.pockets.length; i++) {
+                    found = found.concat(this.pockets[i].search(radius, x, y, z));
+                }
+
+            }
+
+            return found;
+        }
+
     }
 
-    remove(obj: T) {
-        this.objects = this.objects.filter(o => o != obj);
-        return obj;
+    export class Pocket<T> {
+
+        root: SubPocket<T> | undefined
+
+        constructor() {
+            this.root = undefined;
+        }
+
+        put(obj: T, radius: number, x: number, y: number, z = 0): () => T {
+
+            // Try to place the object in the current root
+            if (this.root) {
+                const result = this.root.put(obj, radius, x, y, z);
+                if (result) return result;
+            }
+
+            // Either root does not exist, or put failed, so create a custom pocket for the object
+            const pos = {
+                x: x,
+                y: y,
+                z: z
+            };
+            const sp = new SubPocket<T>({
+                parent: this,
+                radius: this.root ? this.root.radius : magic_ratio * radius,
+                position: pos
+            });
+            if (!this.root) {
+                this.root = sp;
+            } else {
+
+                // Create a new root that encompasses both the old root and new SubPocket
+                const max_dist = mag(sub(this.root.position, sp.position)) + sp.radius; // The distance from the current root to the outside of the new SubPocket
+                const new_root = new SubPocket<T>({
+                    parent: this,
+                    radius: magic_ratio * max_dist,
+                    position: this.root.position
+                });
+
+                // Set the parents of the old root and new SubPocket to the new root
+                this.root.parent = new_root;
+                sp.parent = new_root;
+
+                // Add the old root and new SubPocket to the new root
+                new_root.pockets.push(this.root);
+                new_root.pockets.push(sp);
+
+                // Set the new root
+                this.root = new_root;
+
+            }
+            const result = sp.put(obj, radius, x, y, z);
+            if (!result) throw new Error("Result expected for put call...");
+            return result;
+
+        }
+
+        /**
+         * Removes the root SubPocket.
+         * 
+         * @param sp The SubPocket that requested to be removed
+         */
+        remove(sp: SubPocket<T>) {
+            if (sp == this.root) {
+                this.root = undefined;
+            }
+        }
+
+        /**
+         * Returns an array of all objects that exist wholly or partially within the given radius of the desired coordinates.
+         * 
+         * @param radius The radius of the search
+         * @param x The x position of the center of the search
+         * @param y The y position of the center of the search
+         * @param z The z position of the center of the search
+         */
+        search(radius: number, x: number, y: number, z = 0) {
+            if (this.root) {
+                return this.root.search(radius, x, y, z);
+            } else {
+                return new Array<Particle<T>>();
+            }
+        }
+
+        closest(x: number, y: number, z = 0) {
+            if (this.root) {
+                const pos = { x: x, y: y, z: z };
+                const step = this.root.radius / 100;
+                for (let r = step; r < this.root.radius * 2; r += step) {
+                    const pool = this.search(r, x, y, z);
+                    if (pool.length > 0) {
+                        let closest = pool[0];
+                        let dist = mag(sub(closest, pos));
+                        for (let i = 1; i < pool.length; i++) {
+                            const p = pool[i];
+                            const p_dist = mag(sub(p, pos));
+                            if (p_dist < dist) {
+                                closest = p;
+                                dist = p_dist;
+                            }
+                        }
+                        return closest;
+                    }
+                }
+            }
+            return undefined;
+        }
+
     }
-
-}
-
-class Pocket<T> {
-
-    root: SubPocket<T> | undefined
-
-    constructor() { }
 
 }
