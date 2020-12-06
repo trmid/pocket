@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+
+<html lang='en'>
+
+<head>
+    <title>Pocket - Intro</title>
+    <meta charset="utf-8">
+    <script src="../pocket.js"></script>
+</head>
+
+<body>
+
+    <canvas id="canvas" width="600" height="600"></canvas>
+    <h3 id="progress">Loading...</h3>
+    <h3>Closest dot to the cursor:</h3>
+    <p id="dots"></p>
+
+    <script>
+        var pocket, canvas, ctx, dots, progress, current = 0;
+        const size = 0.5;
+        const count = 10000000;
+        window.onload = function () {
+            dots = document.getElementById("dots");
+            progress = document.getElementById("progress");
+            canvas = document.getElementById("canvas");
+            ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            pocket = new Pocket();
+            const add_dots = function () {
+                for (let i = 0; i < 1000 && current < count; i++) {
+                    const hue = Math.floor(Math.random() * 360);
+                    const particle = pocket.put(new Particle({
+                        x: Math.sqrt(Math.random()) * canvas.width,
+                        y: Math.sqrt(Math.random()) * canvas.height,
+                        radius: size,
+                        data: hue
+                    }));
+                    ctx.beginPath();
+                    ctx.ellipse(particle.x, particle.y, size, size, 0, 0, Math.PI * 2);
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    ctx.fill();
+                    current++;
+                }
+                progress.innerHTML = `Loading: ${(100 * current / count).toFixed(2)}%`;
+                if (current < count) {
+                    setTimeout(add_dots, 0);
+                }
+            }
+            setTimeout(add_dots, 0);
+            canvas.addEventListener("mousemove", (e) => {
+                const closest = pocket.closest({ x: e.offsetX, y: e.offsetY }, size);
+                dots.innerHTML = `x: ${closest.x}, y: ${closest.y}, hue: ${closest.data}`;
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,3 +1,6 @@
+/*!
+ * Copyright (c) Trevor Richard
+ */
 
 interface Vector {
     x: number

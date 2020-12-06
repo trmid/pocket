@@ -1,58 +1,55 @@
 <!DOCTYPE html>
-
 <html lang='en'>
 
 <head>
-    <title>Pocket - Intro</title>
+    <title>Intro to Pockets</title>
     <meta charset="utf-8">
+
+    <!-- Link to the pocket.js script -->
     <script src="../pocket.js"></script>
+
 </head>
 
 <body>
 
-    <canvas id="canvas" width="600" height="600"></canvas>
-    <h3 id="progress">Loading...</h3>
-    <h3>Closest dot to the cursor:</h3>
-    <p id="dots"></p>
+    <!-- Place to display the particles near the center of our defined area -->
+    <h3>Particles Near (0.5, 0.5, 0.5):</h3>
+    <p id="particles"></p>
 
+    <!-- Script to add random particles to a Pocket -->
     <script>
-        var pocket, canvas, ctx, dots, progress, current = 0;
-        const size = 0.5;
-        const count = 10000000;
+
         window.onload = function () {
-            dots = document.getElementById("dots");
-            progress = document.getElementById("progress");
-            canvas = document.getElementById("canvas");
-            ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            pocket = new Pocket();
-            const add_dots = function () {
-                for (let i = 0; i < 1000 && current < count; i++) {
-                    const hue = Math.floor(Math.random() * 360);
-                    const particle = pocket.put(new Particle({
-                        x: Math.random() * canvas.width,
-                        y: Math.random() * canvas.height,
-                        radius: size,
-                        data: hue
-                    }));
-                    ctx.beginPath();
-                    ctx.ellipse(particle.x, particle.y, size, size, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                    ctx.fill();
-                    current++;
-                }
-                progress.innerHTML = `Loading: ${(100 * current / count).toFixed(2)}%`;
-                if (current < count) {
-                    setTimeout(add_dots, 0);
-                }
+
+            // Create a new Pocket
+            const pocket = new Pocket();
+
+            // Add 1000 random particles within the bounds (0, 0, 0) and (1, 1, 1)
+            for (let i = 0; i < 1000; i++) {
+
+                // Put the random particle in the Pocket
+                pocket.put({
+                    x: Math.random(),
+                    y: Math.random(),
+                    z: Math.random(),
+                    radius: 0.05, // The radius of each particle
+                    data: "Particle #" + i // Any additional data we want to store with the particle
+                });
+
             }
-            setTimeout(add_dots, 0);
-            canvas.addEventListener("mousemove", (e) => {
-                const closest = pocket.closest({ x: e.offsetX, y: e.offsetY }, size);
-                dots.innerHTML = `x: ${closest.x}, y: ${closest.y}, hue: ${closest.data}`;
+
+            // Search for all particles within a 0.05 radius of the center of our area
+            const particles = pocket.search(0.05, { x: 0.5, y: 0.5, z: 0.5 });
+
+            // Print the found particle data
+            const elem = document.getElementById("particles");
+            elem.innerHTML = "";
+            particles.forEach(p => {
+                elem.innerHTML += `${p.data} (x: ${p.x.toFixed(2)}, y: ${p.y.toFixed(2)}, z: ${p.z.toFixed(2)})<br>`;
             });
+
         }
+
     </script>
 
 </body>

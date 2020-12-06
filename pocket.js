@@ -1,3 +1,6 @@
+/*!
+ * Copyright (c) Trevor Richard
+ */
 var Particle = (function () {
     function Particle(_a) {
         var x = _a.x, y = _a.y, _b = _a.z, z = _b === void 0 ? 0 : _b, _c = _a.radius, radius = _c === void 0 ? 0 : _c, data = _a.data;
