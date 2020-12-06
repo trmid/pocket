@@ -7,7 +7,7 @@ An efficient and scalable method of managing particle systems.
 var pocket = new Pocket();
 ```
 
-## Adding Particles to the Pocket
+## Adding Particles to a Pocket
 
 ```javascript
 // Add 1000 particles with random locations within the bounds (0, 0, 0) and (100, 100, 100)
@@ -22,7 +22,7 @@ for(let i = 0; i < 1000; i++){
 }
 ```
 
-## Searching and Area for Particles
+## Searching for Particles
 
 ```javascript
 // Get all particles within a 1 unit radius of the point (50, 50, 50)
