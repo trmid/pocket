@@ -26,20 +26,20 @@ for(let i = 0; i < 1000; i++){
 
 ```javascript
 // Get all particles within a 1 unit radius of the point (50, 50, 50)
-const particles = pocket.search(1, 50, 50, 50);
+const particles = pocket.search(1, {x: 50, y: 50, z: 50});
 ```
 
 ## Getting the Closest Particle
 
 ```javascript
 // Get only the closest particle to the point (50, 50, 50)
-const closest = pocket.closest(50, 50, 50);
+const closest = pocket.closest({x: 50, y: 50, z: 50});
 ```
 
 ## Moving a Particle
 
 ```javascript
 // Get the closest particle to (50, 50, 50) and move it to (0, 0, 0)
-const closest = pocket.closest(50, 50, 50);
-closest.moveTo(0, 0, 0);
+const closest = pocket.closest({x: 50, y: 50, z: 50});
+closest.moveTo({x: 0, y: 0, z: 0});
 ```
