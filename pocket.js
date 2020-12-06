@@ -1,3 +1,26 @@
+var Particle = (function () {
+    function Particle(_a) {
+        var x = _a.x, y = _a.y, _b = _a.z, z = _b === void 0 ? 0 : _b, _c = _a.radius, radius = _c === void 0 ? 0 : _c, data = _a.data;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.radius = radius;
+        this.data = data;
+    }
+    Particle.prototype.moveTo = function (position) {
+        if (!position.z)
+            position.z = 0;
+        if (this.pocket) {
+            if (this.retrieve)
+                this.retrieve();
+            this.x = position.x;
+            this.y = position.y;
+            this.z = position.z;
+            this.pocket.put(this);
+        }
+    };
+    return Particle;
+}());
 var SubPocket = (function () {
     function SubPocket(_a) {
         var parent = _a.parent, radius = _a.radius, position = _a.position;
@@ -7,28 +30,21 @@ var SubPocket = (function () {
         this.particles = new Array();
         this.position = position;
     }
-    SubPocket.prototype.put = function (obj, x, y, z, radius) {
-        if (z === void 0) { z = 0; }
-        if (radius === void 0) { radius = 0; }
-        var diff = Pocket.Tools.sub(this.position, { x: x, y: y, z: z });
+    SubPocket.prototype.put = function (p) {
+        var diff = Pocket.Tools.sub(this.position, p);
         var dist = Pocket.Tools.mag(diff);
-        if (dist + radius < this.radius) {
-            if (radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
-                this.particles.push({
-                    obj: obj,
-                    radius: radius,
-                    x: x,
-                    y: y,
-                    z: z
-                });
+        if (dist + p.radius < this.radius) {
+            if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
+                this.particles.push(p);
                 var self_1 = this;
-                return function () {
-                    return self_1.retrieve(obj);
+                p.retrieve = function () {
+                    return self_1.retrieve(p);
                 };
+                return p;
             }
             else {
                 for (var i = 0; i < this.pockets.length; i++) {
-                    var result = this.pockets[i].put(obj, x, y, z, radius);
+                    var result = this.pockets[i].put(p);
                     if (result)
                         return result;
                 }
@@ -36,25 +52,25 @@ var SubPocket = (function () {
                     parent: this,
                     radius: this.radius / Pocket.Tools.MAGIC_RATIO,
                     position: {
-                        x: x,
-                        y: y,
-                        z: z
+                        x: p.x,
+                        y: p.y,
+                        z: p.z
                     }
                 });
                 this.pockets.push(sp);
-                return sp.put(obj, x, y, z, radius);
+                return sp.put(p);
             }
         }
         else {
             return undefined;
         }
     };
-    SubPocket.prototype.retrieve = function (obj) {
-        this.particles = this.particles.filter(function (p) { return p.obj != obj; });
+    SubPocket.prototype.retrieve = function (p) {
+        this.particles = this.particles.filter(function (p) { return p != p; });
         if (this.pockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
         }
-        return obj;
+        return p;
     };
     SubPocket.prototype.remove = function (sp) {
         this.pockets = this.pockets.filter(function (p) { return p != sp; });
@@ -62,22 +78,21 @@ var SubPocket = (function () {
             this.parent.remove(this);
         }
     };
-    SubPocket.prototype.search = function (radius, x, y, z) {
-        if (z === void 0) { z = 0; }
+    SubPocket.prototype.search = function (radius, center) {
         var found = new Array();
-        var diff = Pocket.Tools.sub(this.position, { x: x, y: y, z: z });
+        var diff = Pocket.Tools.sub(this.position, center);
         var dist = Pocket.Tools.mag(diff);
         if (dist - radius < this.radius) {
             for (var i = 0; i < this.particles.length; i++) {
                 var p = this.particles[i];
-                var p_diff = Pocket.Tools.sub({ x: p.x, y: p.y, z: p.z }, { x: x, y: y, z: z });
+                var p_diff = Pocket.Tools.sub(p, center);
                 var p_dist = Pocket.Tools.mag(p_diff);
                 if (p_dist - radius < p.radius) {
                     found.push(p);
                 }
             }
             for (var i = 0; i < this.pockets.length; i++) {
-                found = found.concat(this.pockets[i].search(radius, x, y, z));
+                found = found.concat(this.pockets[i].search(radius, center));
             }
         }
         return found;
@@ -88,23 +103,20 @@ var Pocket = (function () {
     function Pocket() {
         this.root = undefined;
     }
-    Pocket.prototype.put = function (obj, x, y, z, radius) {
-        if (z === void 0) { z = 0; }
-        if (radius === void 0) { radius = 0; }
+    Pocket.prototype.put = function (particle) {
         if (this.root) {
-            var result_1 = this.root.put(obj, x, y, z, radius);
+            var result_1 = this.root.put(particle);
             if (result_1)
                 return result_1;
         }
-        var pos = {
-            x: x,
-            y: y,
-            z: z
-        };
         var sp = new SubPocket({
             parent: this,
-            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * radius,
-            position: pos
+            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * particle.radius,
+            position: {
+                x: particle.x,
+                y: particle.y,
+                z: particle.z
+            }
         });
         if (!this.root) {
             this.root = sp;
@@ -122,9 +134,10 @@ var Pocket = (function () {
             new_root.pockets.push(sp);
             this.root = new_root;
         }
-        var result = sp.put(obj, x, y, z, radius);
+        var result = sp.put(particle);
         if (!result)
             throw new Error("Result expected for put call...");
+        particle.pocket = this;
         return result;
     };
     Pocket.prototype.remove = function (sp) {
@@ -132,34 +145,36 @@ var Pocket = (function () {
             this.root = undefined;
         }
     };
-    Pocket.prototype.search = function (radius, x, y, z) {
-        if (z === void 0) { z = 0; }
+    Pocket.prototype.search = function (radius, center) {
+        if (!center.z)
+            center.z = 0;
         if (this.root) {
-            return this.root.search(radius, x, y, z).map(function (p) { return p.obj; });
+            return this.root.search(radius, center);
         }
         else {
             return new Array();
         }
     };
-    Pocket.prototype.closest = function (x, y, z) {
-        if (z === void 0) { z = 0; }
+    Pocket.prototype.closest = function (position, startRadius) {
+        if (!position.z)
+            position.z = 0;
         if (this.root) {
-            var pos = { x: x, y: y, z: z };
-            var step = this.root.radius / 100;
-            for (var r = step; r < this.root.radius * 2; r += step) {
-                var pool = this.root.search(r, x, y, z);
+            if (!startRadius)
+                startRadius = this.root.radius / 100;
+            for (var r = startRadius; r < this.root.radius * 2; r *= 2) {
+                var pool = this.root.search(r, position);
                 if (pool.length > 0) {
                     var closest = pool[0];
-                    var dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, pos));
+                    var dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, position));
                     for (var i = 1; i < pool.length; i++) {
                         var p = pool[i];
-                        var p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, pos));
+                        var p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, position));
                         if (p_dist < dist) {
                             closest = p;
                             dist = p_dist;
                         }
                     }
-                    return closest.obj;
+                    return closest;
                 }
             }
         }

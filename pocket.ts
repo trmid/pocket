@@ -5,9 +5,52 @@ interface Vector {
     z: number
 }
 
-interface Particle<T> extends Vector {
-    obj: T
+class Particle<T> implements Vector {
+
+    x: number
+    y: number
+    z: number
     radius: number
+    data: T
+    pocket?: Pocket<T>
+    retrieve?: () => Particle<T>
+
+    constructor({
+        x,
+        y,
+        z = 0,
+        radius = 0,
+        data
+    }: {
+        x: number
+        y: number
+        z?: number
+        radius: number,
+        data: T
+    }) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.radius = radius;
+        this.data = data;
+    }
+
+    /**
+     * Safely moves the particle's position in the Pocket.
+     * 
+     * @param position The vector position to move the Particle to.
+     */
+    moveTo(position: Vector) {
+        if (!position.z) position.z = 0;
+        if (this.pocket) {
+            if (this.retrieve) this.retrieve();
+            this.x = position.x;
+            this.y = position.y;
+            this.z = position.z;
+            this.pocket.put(this);
+        }
+    }
+
 }
 
 class SubPocket<T> {
@@ -35,46 +78,33 @@ class SubPocket<T> {
     }
 
     /**
-     * Places the object in this pocket or in a sub pocket of this pocket and returns a function to call to retrieve the object from the pocket. (Call to pull the object out of the pocket if being moved)
+     * Places the particle in this pocket or in a sub pocket of this pocket and returns the particle
      * 
-     * @param obj The object to store
-     * @param radius The radial influence of the object
-     * @param x The x position of the object
-     * @param y The y position of the object
-     * @param z The z position of the object
+     * @param p The Particle to put in the SubPocket
      */
-    put(
-        obj: T,
-        x: number,
-        y: number,
-        z = 0,
-        radius = 0
-    ): (() => T) | undefined {
-        const diff = Pocket.Tools.sub(this.position, { x: x, y: y, z: z });
+    put(p: Particle<T>): Particle<T> | undefined {
+        const diff = Pocket.Tools.sub(this.position, p);
         const dist = Pocket.Tools.mag(diff);
-        if (dist + radius < this.radius) {
-            if (radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
+        if (dist + p.radius < this.radius) {
+            if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
 
                 // Add object to the pocket
-                this.particles.push({
-                    obj: obj,
-                    radius: radius,
-                    x: x,
-                    y: y,
-                    z: z
-                });
+                this.particles.push(p);
 
-                // Return retrieval function
+                // Set retrieval function
                 const self = this;
-                return () => {
-                    return self.retrieve(obj);
+                p.retrieve = () => {
+                    return self.retrieve(p);
                 };
+
+                // Return the Particle
+                return p;
 
             } else {
 
                 // Add object to a SubPocket
                 for (let i = 0; i < this.pockets.length; i++) {
-                    const result = this.pockets[i].put(obj, x, y, z, radius);
+                    const result = this.pockets[i].put(p);
                     if (result) return result;
                 }
 
@@ -83,13 +113,13 @@ class SubPocket<T> {
                     parent: this,
                     radius: this.radius / Pocket.Tools.MAGIC_RATIO,
                     position: {
-                        x: x,
-                        y: y,
-                        z: z
+                        x: p.x,
+                        y: p.y,
+                        z: p.z
                     }
                 });
                 this.pockets.push(sp);
-                return sp.put(obj, x, y, z, radius);
+                return sp.put(p);
 
             }
         } else {
@@ -98,16 +128,16 @@ class SubPocket<T> {
     }
 
     /**
-     * Retrieves an object from this pocket if it is stored here and removes it from the pocket. The call will always return the object regardless if it exists in the pocket or not.
+     * Retrieves a particle from this pocket if it is stored here and removes it from the pocket. The call will always return the particle regardless if it exists in the pocket or not.
      * 
-     * @param obj The object to retrieve from this pocket
+     * @param p The particle to retrieve from this pocket
      */
-    retrieve(obj: T) {
-        this.particles = this.particles.filter(p => p.obj != obj);
+    retrieve(p: Particle<T>) {
+        this.particles = this.particles.filter(p => p != p);
         if (this.pockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
         }
-        return obj;
+        return p;
     }
 
     /**
@@ -123,23 +153,21 @@ class SubPocket<T> {
     }
 
     /**
-     * Returns an array of all objects that exist wholly or partially within the given radius of the desired coordinates.
+     * Returns an array of all Particles that exist wholly or partially within the given radius of the desired coordinates.
      * 
      * @param radius The radius of the search
-     * @param x The x position of the center of the search
-     * @param y The y position of the center of the search
-     * @param z The z position of the center of the search
+     * @param center The 2D or 3D vector coordinates of the center of the search
      */
-    search(radius: number, x: number, y: number, z = 0) {
+    search(radius: number, center: Vector) {
         var found = new Array<Particle<T>>();
-        const diff = Pocket.Tools.sub(this.position, { x: x, y: y, z: z });
+        const diff = Pocket.Tools.sub(this.position, center);
         const dist = Pocket.Tools.mag(diff);
         if (dist - radius < this.radius) {
 
             // Search this pocket's particles
             for (let i = 0; i < this.particles.length; i++) {
                 const p = this.particles[i];
-                const p_diff = Pocket.Tools.sub({ x: p.x, y: p.y, z: p.z }, { x: x, y: y, z: z });
+                const p_diff = Pocket.Tools.sub(p, center);
                 const p_dist = Pocket.Tools.mag(p_diff);
                 if (p_dist - radius < p.radius) {
                     found.push(p);
@@ -148,7 +176,7 @@ class SubPocket<T> {
 
             // Search this pocket's SubPockets
             for (let i = 0; i < this.pockets.length; i++) {
-                found = found.concat(this.pockets[i].search(radius, x, y, z));
+                found = found.concat(this.pockets[i].search(radius, center));
             }
 
         }
@@ -179,30 +207,23 @@ class Pocket<T> {
         this.root = undefined;
     }
 
-    put(
-        obj: T,
-        x: number,
-        y: number,
-        z = 0,
-        radius = 0
-    ): () => T {
+    put(particle: Particle<T>): Particle<T> {
 
-        // Try to place the object in the current root
+        // Try to place the Particle in the current root
         if (this.root) {
-            const result = this.root.put(obj, x, y, z, radius);
+            const result = this.root.put(particle);
             if (result) return result;
         }
 
-        // Either root does not exist, or put failed, so create a custom pocket for the object
-        const pos = {
-            x: x,
-            y: y,
-            z: z
-        };
-        const sp = new SubPocket<T>({
+        // Either root does not exist, or put failed, so create a custom pocket for the particle
+        const sp = new SubPocket({
             parent: this,
-            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * radius,
-            position: pos
+            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * particle.radius,
+            position: {
+                x: particle.x,
+                y: particle.y,
+                z: particle.z
+            }
         });
         if (!this.root) {
             this.root = sp;
@@ -228,8 +249,11 @@ class Pocket<T> {
             this.root = new_root;
 
         }
-        const result = sp.put(obj, x, y, z, radius);
+        const result = sp.put(particle);
         if (!result) throw new Error("Result expected for put call...");
+
+        // Set the particle's pocket reference and return
+        particle.pocket = this;
         return result;
 
     }
@@ -249,43 +273,40 @@ class Pocket<T> {
      * Returns an array of all objects that exist wholly or partially within the given radius of the desired coordinates.
      * 
      * @param radius The radius of the search
-     * @param x The x position of the center of the search
-     * @param y The y position of the center of the search
-     * @param z The z position of the center of the search
+     * @param center The 2D or 3D Vector coordinates of the search
      */
-    search(radius: number, x: number, y: number, z = 0) {
+    search(radius: number, center: Vector) {
+        if (!center.z) center.z = 0;
         if (this.root) {
-            return this.root.search(radius, x, y, z).map(p => p.obj);
+            return this.root.search(radius, center);
         } else {
-            return new Array<T>();
+            return new Array();
         }
     }
 
     /**
      * Returns the closest object to the given position.
      * 
-     * @param x The x position of the search point
-     * @param y The y position of the search point
-     * @param z The z position of the search point
+     * @param position The 2D or 3D vector coordinate of the position to search
      */
-    closest(x: number, y: number, z = 0) {
+    closest(position: Vector, startRadius?: number) {
+        if (!position.z) position.z = 0;
         if (this.root) {
-            const pos = { x: x, y: y, z: z };
-            const step = this.root.radius / 100;
-            for (let r = step; r < this.root.radius * 2; r += step) {
-                const pool = this.root.search(r, x, y, z);
+            if (!startRadius) startRadius = this.root.radius / 100;
+            for (let r = startRadius; r < this.root.radius * 2; r *= 2) {
+                const pool = this.root.search(r, position);
                 if (pool.length > 0) {
                     let closest = pool[0];
-                    let dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, pos));
+                    let dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, position));
                     for (let i = 1; i < pool.length; i++) {
                         const p = pool[i];
-                        const p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, pos));
+                        const p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, position));
                         if (p_dist < dist) {
                             closest = p;
                             dist = p_dist;
                         }
                     }
-                    return closest.obj;
+                    return closest;
                 }
             }
         }
