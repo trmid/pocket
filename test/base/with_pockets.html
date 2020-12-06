@@ -41,7 +41,7 @@
         var canvas, ctx, width, height;
 
         // Animation vars
-        const count = 1000;
+        const count = 500;
         const radius = 10;
         const min_speed = 0;
         const max_speed = 200;
@@ -85,7 +85,7 @@
             frame_time = document.getElementById('frame-time');
 
             // Setup Pocket
-            pocket = new Pocket.Pocket();
+            pocket = new Pocket();
 
             // Setup Particles
             for (let i = 0; i < count; i++) {
@@ -103,7 +103,7 @@
                     bumped: false
                 };
                 particles.push(particle);
-                particle.retrieve = pocket.put(particle, radius, particle.pos.x, particle.pos.y, particle.pos.z);
+                particle.retrieve = pocket.put(particle, particle.pos.x, particle.pos.y, particle.pos.z, radius);
 
             }
 
@@ -196,7 +196,7 @@
                     p.bumped = true;
                     for (let j = 0; j < touching.length; j++) {
 
-                        const p2 = touching[j].obj;
+                        const p2 = touching[j];
                         p2.bumped = true;
                         const diff = Vector.sub(p.pos, p2.pos);
                         const dist = diff.mag();
@@ -222,7 +222,7 @@
                 }
 
                 // Get approximate closest
-                const closest = pocket.closest(p.pos.x, p.pos.y, p.pos.z).obj;
+                const closest = pocket.closest(p.pos.x, p.pos.y, p.pos.z);
                 // Draw line to closest
                 ctx.strokeStyle = 'lime';
                 ctx.beginPath();
@@ -244,7 +244,7 @@
 
                 // Place particle back in the pocket
                 // const t_put = performance.now();
-                p.retrieve = pocket.put(p, radius, p.pos.x, p.pos.y, p.pos.z);
+                p.retrieve = pocket.put(p, p.pos.x, p.pos.y, p.pos.z, radius);
                 // if (i == 0) {
                 //     console.log(performance.now() - t_put);
                 // }
