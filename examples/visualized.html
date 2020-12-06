@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <title>Visualization of Pockets</title>
+    <meta charset="utf-8">
+
+    <!-- Link to the pocket.js script -->
+    <script src="../pocket.js"></script>
+
+</head>
+
+<body>
+
+    <canvas id="particles" width="600" height="600"></canvas>
+    <p>
+        <button id="reset">Reset</button>
+    </p>
+
+    <script>
+
+        var canvas, ctx, pocket;
+
+        window.onload = function () {
+
+            // Get the canvas element and context
+            canvas = document.getElementById("particles");
+            ctx = canvas.getContext('2d');
+
+            // Create a new Pocket
+            const pocket = new Pocket();
+
+            // Add 1000 random particles within the bounds (0, 0) and (canvas.width, canvas.height)
+            for (let i = 0; i < 1000; i++) {
+
+                // Put the random particle in the Pocket
+                const p = pocket.put(new Particle({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    radius: Math.random() * 5 + 0.01, // The radius of each particle
+                    data: {
+                        id: i,
+                        hue: Math.floor(Math.random() * 270)
+                    }
+                }));
+
+                // Draw the particle
+                ctx.fillStyle = `hsl(${p.data.hue}, 100%, 50%)`;
+                ctx.beginPath();
+                ctx.ellipse(p.x, p.y, p.radius, p.radius, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+            }
+
+            // Set a click listener for the canvas
+            canvas.addEventListener("click", (e) => {
+
+                // Get the closest particle to the cursor
+                const closest = pocket.closest({ x: e.offsetX, y: e.offsetY });
+
+                // Draw the particle's subPockets
+                var subPocket = closest.subPocket;
+                while (subPocket.radius) {
+                    console.log(subPocket);
+                    ctx.strokeStyle = 'red';
+                    ctx.beginPath();
+                    ctx.ellipse(subPocket.position.x, subPocket.position.y, subPocket.radius, subPocket.radius, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    subPocket = subPocket.parent;
+                }
+
+            });
+
+            // Set a click listener for the reset button
+            document.getElementById("reset").addEventListener("click", () => {
+                window.location.reload();
+            });
+
+        }
+
+    </script>
+
+</body>
+
+</html>

@@ -7,20 +7,24 @@ var Particle = (function () {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.radius = radius;
+        this.setRadius(radius);
         this.data = data;
     }
     Particle.prototype.moveTo = function (position) {
         if (!position.z)
             position.z = 0;
-        if (this.pocket) {
-            if (this.retrieve)
-                this.retrieve();
+        if (this.pocket && this.subPocket) {
+            this.subPocket.retrieve(this);
             this.x = position.x;
             this.y = position.y;
             this.z = position.z;
             this.pocket.put(this);
         }
+    };
+    Particle.prototype.setRadius = function (radius) {
+        if (radius <= 0)
+            throw new Error("Particle radius must be greater than zero.");
+        this.radius = radius;
     };
     return Particle;
 }());
@@ -39,10 +43,7 @@ var SubPocket = (function () {
         if (dist + p.radius < this.radius) {
             if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
                 this.particles.push(p);
-                var self_1 = this;
-                p.retrieve = function () {
-                    return self_1.retrieve(p);
-                };
+                p.subPocket = this;
                 return p;
             }
             else {
@@ -112,9 +113,10 @@ var Pocket = (function () {
             if (result_1)
                 return result_1;
         }
+        var sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
         var sp = new SubPocket({
             parent: this,
-            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * particle.radius,
+            radius: this.root ? Math.max(this.root.radius, sp_radius) : sp_radius,
             position: {
                 x: particle.x,
                 y: particle.y,
@@ -138,8 +140,9 @@ var Pocket = (function () {
             this.root = new_root;
         }
         var result = sp.put(particle);
-        if (!result)
+        if (!result) {
             throw new Error("Result expected for put call...");
+        }
         particle.pocket = this;
         return result;
     };

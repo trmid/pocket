@@ -15,8 +15,8 @@ class Particle<T> implements Vector {
     z: number
     radius: number
     data: T
-    pocket?: Pocket<T>
-    retrieve?: () => Particle<T>
+    pocket?: Pocket<T> | undefined
+    subPocket?: SubPocket<T> | undefined
 
     constructor({
         x,
@@ -34,7 +34,7 @@ class Particle<T> implements Vector {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.radius = radius;
+        this.setRadius(radius);
         this.data = data;
     }
 
@@ -45,13 +45,23 @@ class Particle<T> implements Vector {
      */
     moveTo(position: Vector) {
         if (!position.z) position.z = 0;
-        if (this.pocket) {
-            if (this.retrieve) this.retrieve();
+        if (this.pocket && this.subPocket) {
+            this.subPocket.retrieve(this);
             this.x = position.x;
             this.y = position.y;
             this.z = position.z;
             this.pocket.put(this);
         }
+    }
+
+    /**
+     * Safely sets the radius of a particle. Only positive, non-zero numbers are permitted.
+     * 
+     * @param radius The radius of the particle
+     */
+    setRadius(radius: number) {
+        if (radius <= 0) throw new Error("Particle radius must be greater than zero.");
+        this.radius = radius;
     }
 
 }
@@ -81,7 +91,7 @@ class SubPocket<T> {
     }
 
     /**
-     * Places the particle in this pocket or in a sub pocket of this pocket and returns the particle
+     * Places the particle in this pocket or in a sub pocket of this pocket and returns the SubPocket it was placed in.
      * 
      * @param p The Particle to put in the SubPocket
      */
@@ -94,11 +104,8 @@ class SubPocket<T> {
                 // Add object to the pocket
                 this.particles.push(p);
 
-                // Set retrieval function
-                const self = this;
-                p.retrieve = () => {
-                    return self.retrieve(p);
-                };
+                // Set particle SubPocket
+                p.subPocket = this;
 
                 // Return the Particle
                 return p;
@@ -219,9 +226,10 @@ class Pocket<T> {
         }
 
         // Either root does not exist, or put failed, so create a custom pocket for the particle
+        const sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
         const sp = new SubPocket({
             parent: this,
-            radius: this.root ? this.root.radius : Pocket.Tools.MAGIC_RATIO * particle.radius,
+            radius: this.root ? Math.max(this.root.radius, sp_radius) : sp_radius,
             position: {
                 x: particle.x,
                 y: particle.y,
@@ -253,7 +261,9 @@ class Pocket<T> {
 
         }
         const result = sp.put(particle);
-        if (!result) throw new Error("Result expected for put call...");
+        if (!result) {
+            throw new Error("Result expected for put call...");
+        }
 
         // Set the particle's pocket reference and return
         particle.pocket = this;
