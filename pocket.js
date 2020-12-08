@@ -26,6 +26,11 @@ var Particle = (function () {
             throw new Error("Particle radius must be greater than zero.");
         this.radius = radius;
     };
+    Particle.prototype.retrieve = function () {
+        if (!this.subPocket)
+            return undefined;
+        return this.subPocket.retrieve(this);
+    };
     return Particle;
 }());
 var SubPocket = (function () {
@@ -108,6 +113,7 @@ var Pocket = (function () {
         this.root = undefined;
     }
     Pocket.prototype.put = function (particle) {
+        particle.pocket = this;
         if (this.root) {
             var result_1 = this.root.put(particle);
             if (result_1)
@@ -143,7 +149,6 @@ var Pocket = (function () {
         if (!result) {
             throw new Error("Result expected for put call...");
         }
-        particle.pocket = this;
         return result;
     };
     Pocket.prototype.remove = function (sp) {
@@ -185,6 +190,11 @@ var Pocket = (function () {
             }
         }
         return undefined;
+    };
+    Pocket.prototype.all = function () {
+        if (!this.root)
+            return new Array();
+        return this.search(this.root.radius, this.root.position);
     };
     Pocket.Tools = {
         MAGIC_RATIO: 1.9,

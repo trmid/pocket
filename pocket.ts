@@ -64,6 +64,14 @@ class Particle<T> implements Vector {
         this.radius = radius;
     }
 
+    /**
+     * Retrieves the particle from the SubPocket and returns the particle.
+     */
+    retrieve() {
+        if (!this.subPocket) return undefined;
+        return this.subPocket.retrieve(this);
+    }
+
 }
 
 class SubPocket<T> {
@@ -219,6 +227,9 @@ class Pocket<T> {
 
     put(particle: Particle<T>): Particle<T> {
 
+        // Set the particle's pocket reference
+        particle.pocket = this;
+
         // Try to place the Particle in the current root
         if (this.root) {
             const result = this.root.put(particle);
@@ -264,9 +275,6 @@ class Pocket<T> {
         if (!result) {
             throw new Error("Result expected for put call...");
         }
-
-        // Set the particle's pocket reference and return
-        particle.pocket = this;
         return result;
 
     }
@@ -293,7 +301,7 @@ class Pocket<T> {
         if (this.root) {
             return this.root.search(radius, center);
         } else {
-            return new Array();
+            return new Array<Particle<T>>();
         }
     }
 
@@ -324,6 +332,14 @@ class Pocket<T> {
             }
         }
         return undefined;
+    }
+
+    /**
+     * Returns an array of all the particles in the pocket. (Not an optimized method)
+     */
+    all() {
+        if (!this.root) return new Array<Particle<T>>();
+        return this.search(this.root.radius, this.root.position);
     }
 
 }
