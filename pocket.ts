@@ -5,7 +5,7 @@
 interface Vector {
     x: number
     y: number
-    z: number
+    z?: number
 }
 
 class Particle<T> implements Vector {
@@ -34,7 +34,7 @@ class Particle<T> implements Vector {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.setRadius(radius);
+        this.radius = this.setRadius(radius);
         this.data = data;
     }
 
@@ -62,6 +62,7 @@ class Particle<T> implements Vector {
     setRadius(radius: number) {
         if (radius <= 0) throw new Error("Particle radius must be greater than zero.");
         this.radius = radius;
+        return radius;
     }
 
     /**
@@ -211,11 +212,11 @@ class Pocket<T> {
             return {
                 x: v0.x - v1.x,
                 y: v0.y - v1.y,
-                z: v0.z - v1.z
+                z: (v0.z || 0) - (v1.z || 0)
             };
         },
         mag: (v: Vector) => {
-            return Math.sqrt(Math.pow(Math.sqrt(v.x * v.x + v.y * v.y), 2) + v.z * v.z);
+            return Math.sqrt(Math.pow(Math.sqrt(v.x * v.x + v.y * v.y), 2) + (v.z || 0) * (v.z || 0));
         }
     };
 

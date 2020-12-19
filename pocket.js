@@ -1,16 +1,16 @@
+"use strict";
 /*!
  * Copyright (c) Trevor Richard
  */
-var Particle = (function () {
-    function Particle(_a) {
-        var x = _a.x, y = _a.y, _b = _a.z, z = _b === void 0 ? 0 : _b, _c = _a.radius, radius = _c === void 0 ? 0 : _c, data = _a.data;
+class Particle {
+    constructor({ x, y, z = 0, radius = 0, data }) {
         this.x = x;
         this.y = y;
         this.z = z;
-        this.setRadius(radius);
+        this.radius = this.setRadius(radius);
         this.data = data;
     }
-    Particle.prototype.moveTo = function (position) {
+    moveTo(position) {
         if (!position.z)
             position.z = 0;
         if (this.pocket && this.subPocket) {
@@ -20,31 +20,30 @@ var Particle = (function () {
             this.z = position.z;
             this.pocket.put(this);
         }
-    };
-    Particle.prototype.setRadius = function (radius) {
+    }
+    setRadius(radius) {
         if (radius <= 0)
             throw new Error("Particle radius must be greater than zero.");
         this.radius = radius;
-    };
-    Particle.prototype.retrieve = function () {
+        return radius;
+    }
+    retrieve() {
         if (!this.subPocket)
             return undefined;
         return this.subPocket.retrieve(this);
-    };
-    return Particle;
-}());
-var SubPocket = (function () {
-    function SubPocket(_a) {
-        var parent = _a.parent, radius = _a.radius, position = _a.position;
+    }
+}
+class SubPocket {
+    constructor({ parent, radius, position }) {
         this.parent = parent;
         this.radius = radius;
         this.pockets = new Array();
         this.particles = new Array();
         this.position = position;
     }
-    SubPocket.prototype.put = function (p) {
-        var diff = Pocket.Tools.sub(this.position, p);
-        var dist = Pocket.Tools.mag(diff);
+    put(p) {
+        const diff = Pocket.Tools.sub(this.position, p);
+        const dist = Pocket.Tools.mag(diff);
         if (dist + p.radius < this.radius) {
             if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO) {
                 this.particles.push(p);
@@ -52,12 +51,12 @@ var SubPocket = (function () {
                 return p;
             }
             else {
-                for (var i = 0; i < this.pockets.length; i++) {
-                    var result = this.pockets[i].put(p);
+                for (let i = 0; i < this.pockets.length; i++) {
+                    const result = this.pockets[i].put(p);
                     if (result)
                         return result;
                 }
-                var sp = new SubPocket({
+                const sp = new SubPocket({
                     parent: this,
                     radius: this.radius / Pocket.Tools.MAGIC_RATIO,
                     position: {
@@ -73,54 +72,53 @@ var SubPocket = (function () {
         else {
             return undefined;
         }
-    };
-    SubPocket.prototype.retrieve = function (p) {
-        this.particles = this.particles.filter(function (p) { return p != p; });
+    }
+    retrieve(p) {
+        this.particles = this.particles.filter(p => p != p);
         if (this.pockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
         }
         return p;
-    };
-    SubPocket.prototype.remove = function (sp) {
-        this.pockets = this.pockets.filter(function (p) { return p != sp; });
+    }
+    remove(sp) {
+        this.pockets = this.pockets.filter(p => p != sp);
         if (this.pockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
         }
-    };
-    SubPocket.prototype.search = function (radius, center) {
+    }
+    search(radius, center) {
         var found = new Array();
-        var diff = Pocket.Tools.sub(this.position, center);
-        var dist = Pocket.Tools.mag(diff);
+        const diff = Pocket.Tools.sub(this.position, center);
+        const dist = Pocket.Tools.mag(diff);
         if (dist - radius < this.radius) {
-            for (var i = 0; i < this.particles.length; i++) {
-                var p = this.particles[i];
-                var p_diff = Pocket.Tools.sub(p, center);
-                var p_dist = Pocket.Tools.mag(p_diff);
+            for (let i = 0; i < this.particles.length; i++) {
+                const p = this.particles[i];
+                const p_diff = Pocket.Tools.sub(p, center);
+                const p_dist = Pocket.Tools.mag(p_diff);
                 if (p_dist - radius < p.radius) {
                     found.push(p);
                 }
             }
-            for (var i = 0; i < this.pockets.length; i++) {
+            for (let i = 0; i < this.pockets.length; i++) {
                 found = found.concat(this.pockets[i].search(radius, center));
             }
         }
         return found;
-    };
-    return SubPocket;
-}());
-var Pocket = (function () {
-    function Pocket() {
+    }
+}
+class Pocket {
+    constructor() {
         this.root = undefined;
     }
-    Pocket.prototype.put = function (particle) {
+    put(particle) {
         particle.pocket = this;
         if (this.root) {
-            var result_1 = this.root.put(particle);
-            if (result_1)
-                return result_1;
+            const result = this.root.put(particle);
+            if (result)
+                return result;
         }
-        var sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
-        var sp = new SubPocket({
+        const sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
+        const sp = new SubPocket({
             parent: this,
             radius: this.root ? Math.max(this.root.radius, sp_radius) : sp_radius,
             position: {
@@ -133,8 +131,8 @@ var Pocket = (function () {
             this.root = sp;
         }
         else {
-            var max_dist = Pocket.Tools.mag(Pocket.Tools.sub(this.root.position, sp.position)) + sp.radius;
-            var new_root = new SubPocket({
+            const max_dist = Pocket.Tools.mag(Pocket.Tools.sub(this.root.position, sp.position)) + sp.radius;
+            const new_root = new SubPocket({
                 parent: this,
                 radius: Pocket.Tools.MAGIC_RATIO * max_dist,
                 position: this.root.position
@@ -145,18 +143,18 @@ var Pocket = (function () {
             new_root.pockets.push(sp);
             this.root = new_root;
         }
-        var result = sp.put(particle);
+        const result = sp.put(particle);
         if (!result) {
             throw new Error("Result expected for put call...");
         }
         return result;
-    };
-    Pocket.prototype.remove = function (sp) {
+    }
+    remove(sp) {
         if (sp == this.root) {
             this.root = undefined;
         }
-    };
-    Pocket.prototype.search = function (radius, center) {
+    }
+    search(radius, center) {
         if (!center.z)
             center.z = 0;
         if (this.root) {
@@ -165,21 +163,21 @@ var Pocket = (function () {
         else {
             return new Array();
         }
-    };
-    Pocket.prototype.closest = function (position, startRadius) {
+    }
+    closest(position, startRadius) {
         if (!position.z)
             position.z = 0;
         if (this.root) {
             if (!startRadius)
                 startRadius = this.root.radius / 100;
-            for (var r = startRadius; r < this.root.radius * 2; r *= 2) {
-                var pool = this.root.search(r, position);
+            for (let r = startRadius; r < this.root.radius * 2; r *= 2) {
+                const pool = this.root.search(r, position);
                 if (pool.length > 0) {
-                    var closest = pool[0];
-                    var dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, position));
-                    for (var i = 1; i < pool.length; i++) {
-                        var p = pool[i];
-                        var p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, position));
+                    let closest = pool[0];
+                    let dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, position));
+                    for (let i = 1; i < pool.length; i++) {
+                        const p = pool[i];
+                        const p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, position));
                         if (p_dist < dist) {
                             closest = p;
                             dist = p_dist;
@@ -190,24 +188,23 @@ var Pocket = (function () {
             }
         }
         return undefined;
-    };
-    Pocket.prototype.all = function () {
+    }
+    all() {
         if (!this.root)
             return new Array();
         return this.search(this.root.radius, this.root.position);
-    };
-    Pocket.Tools = {
-        MAGIC_RATIO: 1.9,
-        sub: function (v0, v1) {
-            return {
-                x: v0.x - v1.x,
-                y: v0.y - v1.y,
-                z: v0.z - v1.z
-            };
-        },
-        mag: function (v) {
-            return Math.sqrt(Math.pow(Math.sqrt(v.x * v.x + v.y * v.y), 2) + v.z * v.z);
-        }
-    };
-    return Pocket;
-}());
+    }
+}
+Pocket.Tools = {
+    MAGIC_RATIO: 1.9,
+    sub: (v0, v1) => {
+        return {
+            x: v0.x - v1.x,
+            y: v0.y - v1.y,
+            z: (v0.z || 0) - (v1.z || 0)
+        };
+    },
+    mag: (v) => {
+        return Math.sqrt(Math.pow(Math.sqrt(v.x * v.x + v.y * v.y), 2) + (v.z || 0) * (v.z || 0));
+    }
+};

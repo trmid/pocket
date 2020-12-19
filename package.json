@@ -1,0 +1,29 @@
+{
+  "name": "@midpoint68/pocket",
+  "version": "1.0.0",
+  "description": "A simple and efficient particle manager for JavaScript.",
+  "main": "pocket.js",
+  "directories": {
+    "example": "examples"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/midpoint68/pocket.git"
+  },
+  "keywords": [
+    "pocket",
+    "particle",
+    "manager",
+    "JavaScript",
+    "lightweight"
+  ],
+  "author": "Trevor Richard",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/midpoint68/pocket/issues"
+  },
+  "homepage": "https://github.com/midpoint68/pocket#readme"
+}
