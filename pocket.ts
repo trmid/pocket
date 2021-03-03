@@ -152,7 +152,7 @@ class SubPocket<T> {
      * @param p The particle to retrieve from this pocket
      */
     retrieve(p: Particle<T>) {
-        this.particles = this.particles.filter(p => p != p);
+        this.particles = this.particles.filter(pp => pp != p);
         if (this.pockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
         }
