@@ -184,8 +184,7 @@ namespace Pocket {
          * @param center The 2D or 3D vector coordinates of the center of the search
          * @param transform The optional transform function to apply to the particles before checking their inclusion
          */
-        search(radius: number, center: Vector, transform?: (v: Vector) => Vector) {
-            var found = new Array<Particle<T>>();
+        search(radius: number, center: Vector, set: Set<Particle<T>>, transform?: (v: Vector) => Vector) {
             const pos = transform ? transform(this.position) : this.position;
             const diff = Pocket.Tools.sub(pos, center);
             const dist = Pocket.Tools.mag(diff);
@@ -198,17 +197,17 @@ namespace Pocket {
                     const p_diff = Pocket.Tools.sub(p_pos, center);
                     const p_dist = Pocket.Tools.mag(p_diff);
                     if (p_dist - radius < p.radius) {
-                        found.push(p);
+                        set.add(p);
                     }
                 }
 
                 // Search this pocket's SubPockets
                 for (let i = 0; i < this.pockets.length; i++) {
-                    found = found.concat(this.pockets[i].search(radius, center, transform));
+                    this.pockets[i].search(radius, center, set, transform);
                 }
 
             }
-            return found;
+            return set;
         }
 
     }
@@ -317,9 +316,9 @@ namespace Pocket {
         search(radius: number, center: Vector, transform?: (v: Vector) => Vector) {
             if (!center.z) center.z = 0;
             if (this.root) {
-                return this.root.search(radius, center, transform);
+                return this.root.search(radius, center, new Set(), transform);
             } else {
-                return new Array<Particle<T>>();
+                return new Set<Particle<T>>();
             }
         }
 
@@ -333,19 +332,18 @@ namespace Pocket {
             if (this.root) {
                 if (!startRadius) startRadius = this.root.radius / 100;
                 for (let r = startRadius; r < this.root.radius * 2; r *= 2) {
-                    const pool = this.root.search(r, position);
-                    if (pool.length > 0) {
-                        let closest = pool[0];
-                        let dist = Pocket.Tools.mag(Pocket.Tools.sub(closest, position));
-                        for (let i = 1; i < pool.length; i++) {
-                            const p = pool[i];
+                    const pool = this.search(r, position);
+                    if (pool.size > 0) {
+                        let closest: Particle<T> | undefined = undefined;
+                        let dist: number | undefined = undefined;
+                        for (const p of pool) {
                             const p_dist = Pocket.Tools.mag(Pocket.Tools.sub(p, position));
-                            if (p_dist < dist) {
+                            if (dist === undefined || p_dist < dist) {
                                 closest = p;
                                 dist = p_dist;
                             }
                         }
-                        return closest;
+                        return <Particle<T>>closest;
                     }
                 }
             }
@@ -356,7 +354,7 @@ namespace Pocket {
          * Returns an array of all the particles in the pocket. (Not an optimized method)
          */
         all() {
-            if (!this.root) return new Array<Particle<T>>();
+            if (!this.root) return new Set<Particle<T>>();
             return this.search(this.root.radius, this.root.position);
         }
 
