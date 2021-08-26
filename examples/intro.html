@@ -4,10 +4,6 @@
 <head>
     <title>Intro to Pockets</title>
     <meta charset="utf-8">
-
-    <!-- Link to the pocket.js script -->
-    <script src="../pocket.js"></script>
-
 </head>
 
 <body>
@@ -17,7 +13,9 @@
     <p id="particles"></p>
 
     <!-- Script to add random particles to a Pocket -->
-    <script>
+    <script type="module">
+
+        import {Pocket, Particle} from "../pocket.js";
 
         window.onload = function () {
 

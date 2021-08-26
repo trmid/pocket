@@ -1,14 +1,13 @@
 {
     "compilerOptions": {
-        "module": "none",
+        "module": "ES6",
         "target": "ES6",
         "noImplicitAny": true,
         "removeComments": true,
         "sourceMap": false,
-        "outFile": "pocket.js",
         "strict": true,
     },
-    "files": [
+    "include": [
         "pocket.ts"
     ]
 }

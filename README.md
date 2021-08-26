@@ -25,7 +25,7 @@ for(let i = 0; i < 1000; i++){
 ## Searching for Particles
 
 ```javascript
-// Get all particles within a 1 unit radius of the point (50, 50, 50)
+// Get a Set of all particles within a 1 unit radius of the point (50, 50, 50)
 const particles = pocket.search(1, {x: 50, y: 50, z: 50});
 ```
 

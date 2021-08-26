@@ -4,10 +4,6 @@
 <head>
     <title>Visualization of Pockets</title>
     <meta charset="utf-8">
-
-    <!-- Link to the pocket.js script -->
-    <script src="../pocket.js"></script>
-
 </head>
 
 <body>
@@ -17,8 +13,9 @@
         <button id="reset">Reset</button>
     </p>
 
-    <script>
-
+    <script type="module">
+        import {Pocket, Particle} from "../pocket.js";
+        
         var canvas, ctx, pocket;
 
         window.onload = function () {

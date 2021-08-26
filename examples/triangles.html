@@ -4,10 +4,6 @@
 <head>
     <title>Triangles</title>
     <meta charset="utf-8">
-
-    <!-- Link to the pocket.js script -->
-    <script src="../pocket.js"></script>
-
     <style>
         html,
         body {
@@ -31,7 +27,6 @@
             padding: 1em;
         }
     </style>
-
 </head>
 
 <body>
@@ -45,7 +40,8 @@
         </header>
     </div>
 
-    <script>
+    <script type="module">
+        import {Pocket, Particle} from "../pocket.js";
 
         window.onload = function () {
 
@@ -56,10 +52,10 @@
             ]
 
             // Get the canvas element and context
-            canvas = document.getElementById("particles");
+            const canvas = document.getElementById("particles");
             canvas.width = window.outerWidth;
             canvas.height = window.outerHeight;
-            ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
 
             // Create a new Pocket
             const pocket = new Pocket();
@@ -93,8 +89,8 @@
 
             // Loop through each particle and connect it to adjacent particles
             const particles = pocket.all();
-            for (let i = 0; i < particles.length; i++) {
-                const p = particles[i].retrieve();
+            for (const p of particles) {
+                p.retrieve();
                 const close_1 = pocket.closest(p).retrieve();
                 const close_2 = pocket.closest(p).retrieve();
                 p.data.p1 = close_1;
@@ -109,10 +105,10 @@
 
                 const pos = { x: e.pageX, y: e.pageY };
 
-                pocket.search(Math.min(canvas.width, canvas.height) / 20, pos).forEach(p => {
+                for(const p of pocket.search(Math.min(canvas.width, canvas.height) / 20, pos)){
                     p.data.vel.x += e.movementX;
                     p.data.vel.y += e.movementY;
-                });
+                }
 
             });
 
@@ -121,8 +117,7 @@
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                for (let i = 0; i < particles.length; i++) {
-                    const p = particles[i];
+                for (const p of particles) {
 
                     if (p.data.vel.x != 0 && p.data.vel.y != 0) {
                         const new_pos = {
