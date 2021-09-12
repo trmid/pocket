@@ -1,6 +1,6 @@
 {
   "name": "@midpoint68/pocket",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A simple and efficient particle manager for JavaScript.",
   "main": "pocket.js",
   "directories": {
