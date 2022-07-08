@@ -1,5 +1,5 @@
 /*!
-Pocket v1.0.3
+Pocket v1.0.4
 (c) 2020 Trevor Richard
 Released under the MIT License.
 */
