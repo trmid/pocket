@@ -1,7 +1,7 @@
 {
-  "name": "@midpoint68/pocket",
-  "version": "1.0.4",
-  "description": "A simple and efficient particle manager for JavaScript.",
+  "name": "pocket-particles",
+  "version": "2.0.0",
+  "description": "A simple particle manager for JavaScript that enables efficient positional queries by dynamically grouping particles into recursively smaller sub pockets.",
   "main": "pocket.js",
   "directories": {
     "example": "examples"
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/midpoint68/pocket.git"
+    "url": "git+https://github.com/trmid/pocket.git"
   },
   "keywords": [
     "pocket",
@@ -23,8 +23,8 @@
   "author": "Trevor Richard",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/midpoint68/pocket/issues"
+    "url": "https://github.com/trmid/pocket/issues"
   },
-  "homepage": "https://github.com/midpoint68/pocket#readme",
+  "homepage": "https://github.com/trmid/pocket#readme",
   "type": "module"
 }
