@@ -28,7 +28,7 @@ export class Particle<T> implements Vector {
     private _radius: number = 0;
 
     // Custom data payload:
-    public data: T
+    public data!: T
 
     // Metadata: 
     private _pocket?: Pocket<T>
@@ -45,13 +45,13 @@ export class Particle<T> implements Vector {
         y: number
         z?: number
         radius?: number
-        data: T
+        data?: T
     }) {
         this._x = x;
         this._y = y;
         this._z = z;
         this.radius = radius;
-        this.data = data;
+        if (data !== undefined) this.data = data;
     }
 
     /**
