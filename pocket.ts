@@ -417,7 +417,7 @@ export class Pocket<T> {
         }
 
         // Either root does not exist, or put failed, so create a custom pocket for the particle
-        const sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
+        const sp_radius = Pocket.Tools.MAGIC_RATIO * (particle.radius || 1);
         const sp = new SubPocket({
             parent: this,
             radius: this._root ? Math.max(this._root.radius, sp_radius) : sp_radius,
