@@ -1,5 +1,5 @@
 {
-  "name": "@trmid/pocket",
+  "name": "pocket-particles",
   "version": "2.0.0",
   "description": "A simple particle manager for JavaScript that enables efficient positional queries by dynamically grouping particles into recursively smaller sub pockets.",
   "main": "pocket.js",
