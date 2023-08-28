@@ -13,7 +13,8 @@ export class Particle {
         this._y = y;
         this._z = z;
         this.radius = radius;
-        this.data = data;
+        if (data !== undefined)
+            this.data = data;
     }
     /**
      * Safely moves the particle's position in the Pocket.
@@ -293,7 +294,7 @@ export class Pocket {
                 return particle;
         }
         // Either root does not exist, or put failed, so create a custom pocket for the particle
-        const sp_radius = Pocket.Tools.MAGIC_RATIO * particle.radius;
+        const sp_radius = Pocket.Tools.MAGIC_RATIO * (particle.radius || 1);
         const sp = new SubPocket({
             parent: this,
             radius: this._root ? Math.max(this._root.radius, sp_radius) : sp_radius,
