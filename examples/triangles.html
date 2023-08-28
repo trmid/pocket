@@ -60,8 +60,8 @@
             // Create a new Pocket
             const pocket = new Pocket();
 
-            // Add 1000 random particles within the bounds (0, 0) and (canvas.width, canvas.height)
-            for (let i = 0; i < 1500; i++) {
+            // Add 2000 random particles within the bounds (0, 0) and (canvas.width, canvas.height)
+            for (let i = 0; i < 2000; i++) {
 
                 // Put the random particle in the Pocket
                 const p = pocket.put(new Particle({
@@ -92,12 +92,12 @@
             for (const p of particles) {
                 p.retrieve();
                 const close_1 = pocket.closest(p).retrieve();
-                const close_2 = pocket.closest(p).retrieve();
+                const close_2 = pocket.closest(p);
                 p.data.p1 = close_1;
                 p.data.p2 = close_2;
+
                 pocket.put(p);
                 pocket.put(close_1);
-                pocket.put(close_2);
             }
 
             // Set a click listener for the canvas
@@ -147,13 +147,15 @@
                     // Render Particle
                     if (p.data.p1 && p.data.p2) {
                         const opacity = Math.min(100, Math.floor(Math.sqrt(p.data.vel.x * p.data.vel.x + p.data.vel.y * p.data.vel.y))) / 100.0;
-                        ctx.fillStyle = `rgba(${p.data.color.r}, ${p.data.color.g}, ${p.data.color.b}, ${opacity})`;
-                        ctx.beginPath();
-                        ctx.moveTo(p.x, p.y);
-                        ctx.lineTo(p.data.p1.x, p.data.p1.y);
-                        ctx.lineTo(p.data.p2.x, p.data.p2.y);
-                        ctx.lineTo(p.x, p.y);
-                        ctx.fill();
+                        if (opacity > 0.01) {
+                            ctx.fillStyle = `rgba(${p.data.color.r}, ${p.data.color.g}, ${p.data.color.b}, ${opacity})`;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(p.data.p1.x, p.data.p1.y);
+                            ctx.lineTo(p.data.p2.x, p.data.p2.y);
+                            ctx.lineTo(p.x, p.y);
+                            ctx.fill();
+                        }
                     }
                 }
             };

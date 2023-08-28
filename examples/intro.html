@@ -26,13 +26,13 @@
             for (let i = 0; i < 1000; i++) {
 
                 // Put the random particle in the Pocket
-                pocket.put({
+                pocket.put(new Particle({
                     x: Math.random(),
                     y: Math.random(),
                     z: Math.random(),
                     radius: 0.05, // The radius of each particle
                     data: "Particle #" + i // Any additional data we want to store with the particle
-                });
+                }));
 
             }
 

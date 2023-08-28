@@ -3,7 +3,7 @@
         "module": "ES6",
         "target": "ES6",
         "noImplicitAny": true,
-        "removeComments": true,
+        "removeComments": false,
         "sourceMap": false,
         "strict": true,
     },

@@ -1,5 +1,5 @@
 # Pocket
-An efficient and scalable method of managing particle systems.
+A simple particle manager for JavaScript that enables efficient positional queries by dynamically grouping particles into recursively smaller sub pockets.
 
 ## Creating a Pocket
 
@@ -12,13 +12,13 @@ var pocket = new Pocket();
 ```javascript
 // Add 1000 particles with random locations within the bounds (0, 0, 0) and (100, 100, 100)
 for(let i = 0; i < 1000; i++){
-  pocket.put({
+  pocket.put(new Particle({
     data: 'Particle #'+i,
     x: Math.random()*100,
     y: Math.random()*100,
     z: Math.random()*100,
     radius: 0.5
-  });
+  }));
 }
 ```
 
