@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+  <title>Pocket Particles</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    html,
+    body {
+      font-family: "Open Sans", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #particles,
+    #wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+
+    #wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      overflow-y: auto;
+      text-align: center;
+    }
+
+    header {
+      padding: 1em;
+    }
+
+    main {
+      padding: 1em;
+    }
+
+    h4 {
+      color: #888;
+    }
+
+    .list {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      flex-direction: column;
+      gap: 1em;
+    }
+
+    .list > a {
+      border-radius: 0.5em;
+      border: 1px solid #888;
+      padding: 0.5em;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="particles"></canvas>
+
+  <div id="wrapper">
+    <header>
+      <h1>Pocket Particles</h1>
+      <h4>Scalable Particle Structures</h4>
+    </header>
+    <main>
+      <h3>Examples</h3>
+      <div class="list">
+        <a href="./examples/dots.html">Dots (Search Performance)</a>
+        <a href="./examples/visualized.html">Pocket Visualization</a>
+      </div class="list">
+    </main>
+  </div>
+
+  <script type="module">
+    import { Pocket, Particle } from "../pocket.js";
+
+    window.addEventListener("load", () => {
+
+      const colors = [
+        { r: 254, g: 200, b: 0 },
+        { r: 255, g: 228, b: 129 },
+        { r: 93, g: 93, b: 93 }
+      ]
+
+      // Get the canvas element and context
+      const canvas = document.getElementById("particles");
+      const ctx = canvas.getContext('2d');
+
+      // Define Pocket and Particle array vars
+      let pocket, particles;
+
+      const reset = () => {
+
+        // Reset canvas bounds
+        canvas.width = window.outerWidth;
+        canvas.height = window.outerHeight;
+
+        // Create a new Pocket
+        pocket = new Pocket();
+
+        // Add 2000 random particles within the bounds (0, 0) and (canvas.width, canvas.height)
+        for (let i = 0; i < 2000; i++) {
+
+          // Put the random particle in the Pocket
+          const p = pocket.put(new Particle({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            data: {
+              id: i,
+              color: colors[Math.floor(Math.random() * colors.length)],
+              p1: undefined,
+              p2: undefined,
+              vel: {
+                x: 0,
+                y: 0
+              }
+            }
+          }));
+
+          p.data.start = {
+            x: p.x,
+            y: p.y
+          };
+
+        }
+
+        // Loop through each particle and connect it to adjacent particles
+        particles = pocket.all();
+        for (const p of particles) {
+          p.retrieve();
+          const close_1 = pocket.closest(p).retrieve();
+          const close_2 = pocket.closest(p);
+          p.data.p1 = close_1;
+          p.data.p2 = close_2;
+
+          pocket.put(p);
+          pocket.put(close_1);
+        }
+      }
+
+      // Call reset
+      reset();
+
+      // Add an event listener to reset on window resize
+      window.addEventListener("resize", reset);
+
+      // Set a click listener for the canvas
+      document.addEventListener("pointermove", (e) => {
+
+        const pos = { x: e.pageX, y: e.pageY };
+
+        for (const p of pocket.search(Math.min(canvas.width, canvas.height) / 20, pos)) {
+          p.data.vel.x += e.movementX;
+          p.data.vel.y += e.movementY;
+        }
+
+      });
+
+      const draw = () => {
+        requestAnimationFrame(draw);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const p of particles) {
+
+          if (p.data.vel.x != 0 && p.data.vel.y != 0) {
+            const new_pos = {
+              x: (p.x + p.data.vel.x / 10.0) * 0.9 + 0.1 * p.data.start.x,
+              y: (p.y + p.data.vel.y / 10.0) * 0.9 + 0.1 * p.data.start.y
+            };
+
+            p.moveTo(new_pos);
+
+            p.data.vel.x *= 0.99;
+            p.data.vel.y *= 0.99;
+
+          }
+
+          // Pull connected particles
+          const avg_vel = {
+            x: (p.data.vel.x + p.data.p1.data.vel.x + p.data.p2.data.vel.x) / 3,
+            y: (p.data.vel.y + p.data.p1.data.vel.y + p.data.p2.data.vel.y) / 3
+          };
+          p.data.vel.x = avg_vel.x;
+          p.data.vel.y = avg_vel.y;
+          p.data.p1.data.vel.x = avg_vel.x;
+          p.data.p1.data.vel.y = avg_vel.y;
+          p.data.p2.data.vel.x = avg_vel.x;
+          p.data.p2.data.vel.y = avg_vel.y;
+
+          // Render Particle
+          if (p.data.p1 && p.data.p2) {
+            const opacity = Math.min(100, Math.floor(Math.sqrt(p.data.vel.x * p.data.vel.x + p.data.vel.y * p.data.vel.y))) / 100.0;
+            if (opacity > 0.01) {
+              ctx.fillStyle = `rgba(${p.data.color.r}, ${p.data.color.g}, ${p.data.color.b}, ${opacity})`;
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p.data.p1.x, p.data.p1.y);
+              ctx.lineTo(p.data.p2.x, p.data.p2.y);
+              ctx.lineTo(p.x, p.y);
+              ctx.fill();
+            }
+          }
+        }
+      };
+
+      draw();
+
+    });
+
+  </script>
+
+</body>
+
+</html>
