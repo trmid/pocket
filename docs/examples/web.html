@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+  <title>Pocket Particles - Web</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+  <style>
+    html,
+    body {
+      font-family: "Open Sans", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    #particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="particles"></canvas>
+
+  <script type="module">
+    import { Pocket, Particle } from "https://cdn.jsdelivr.net/gh/trmid/pocket/pocket.js";
+
+    window.addEventListener("load", () => {
+
+      // Define constants
+      const MIN_SPEED = 0;    // pixels / second
+      const MAX_SPEED = 200;  // pixels / second
+      const NUM_PARTICLES = 1000;
+      const CONNECTION_DIST_FRACTION = .05;
+
+      // Define possible colors for particles
+      const colors = [
+        { h: Math.floor(Math.random() * 360), s: 80, l: 60 },
+        { h: Math.floor(Math.random() * 360), s: 80, l: 60 },
+        { h: Math.floor(Math.random() * 360), s: 80, l: 60 }
+      ];
+
+      // Get the canvas element and context
+      const canvas = document.getElementById("particles");
+      const ctx = canvas.getContext('2d');
+
+      // Add an event listener to update canvas on window resize
+      const resizeCanvas = () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      };
+      window.addEventListener("resize", resizeCanvas);
+
+      // Define Pocket and Particle array vars
+      let pocket;
+      const particles = [];
+
+      // Function to assign random state to a particle
+      const randomizeParticleState = (particle) => {
+        const radialDirection = Math.random() * Math.PI * 2;
+        const speed = Math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED;
+        particle.moveTo({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height
+        });
+        particle.radius = 1 + Math.random() * 5;
+        particle.data.color = colors[Math.floor(Math.random() * colors.length)];
+        particle.data.vel = {
+          x: Math.cos(radialDirection) * speed,
+          y: Math.sin(radialDirection) * speed
+        };
+      };
+
+      // Function to set up pocket & all particles
+      const setup = () => {
+
+        // Resize canvas
+        resizeCanvas();
+
+        // Create a new Pocket
+        pocket = new Pocket();
+
+        // Add random particles
+        for (let i = 0; i < NUM_PARTICLES; i++) {
+
+          // Create a new particle
+          const particle = new Particle({
+            x: 0,
+            y: 0,
+            radius: 0,
+            data: {
+              id: i
+            }
+          });
+
+          // Assign random state to particle
+          randomizeParticleState(particle);
+
+          // Add to particle pocket & array
+          pocket.put(particle);
+          particles.push(particle);
+
+        }
+        console.log(particles);
+      }
+
+      // Call setup
+      setup();
+
+      // Set a click listener for the canvas
+      document.addEventListener("pointermove", (e) => {
+
+        const pos = { x: e.pageX, y: e.pageY };
+
+        for (const p of pocket.search(Math.min(canvas.width, canvas.height) / 20, pos)) {
+          p.data.vel.x += e.movementX;
+          p.data.vel.y += e.movementY;
+        }
+
+      });
+
+      let lastDraw = performance.now();
+      const draw = () => {
+        requestAnimationFrame(draw);
+
+        const now = performance.now();
+        const deltaT = now - lastDraw;
+        lastDraw = now;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+
+          if (p.data.vel.x != 0 || p.data.vel.y != 0) {
+            const new_pos = {
+              x: (p.x + p.data.vel.x * deltaT / 1000),
+              y: (p.y + p.data.vel.y * deltaT / 1000)
+            };
+
+            if (new_pos.x <= p.radius) {
+              new_pos.x = p.radius;
+              p.data.vel.x *= -1;
+            } else if (new_pos.x >= canvas.width - p.radius) {
+              new_pos.x = canvas.width - p.radius;
+              p.data.vel.x *= -1;
+            }
+
+            if (new_pos.y <= p.radius) {
+              new_pos.y = p.radius;
+              p.data.vel.y *= -1;
+            } else if (new_pos.y >= canvas.height - p.radius) {
+              new_pos.y = canvas.height - p.radius;
+              p.data.vel.y *= -1;
+            }
+
+            p.moveTo(new_pos);
+
+            // Slow down particles over time
+            p.data.vel.x *= 0.996;
+            p.data.vel.y *= 0.996;
+
+          }
+
+          // Render Particle
+          const opacity = Math.min(100, Math.floor(Math.sqrt(p.data.vel.x * p.data.vel.x + p.data.vel.y * p.data.vel.y))) / 100.0;
+          if (opacity > 0) {
+            ctx.fillStyle = `hsla(${p.data.color.h}, ${p.data.color.s}%, ${p.data.color.l}%, ${opacity})`;
+            ctx.beginPath();
+            ctx.ellipse(p.x, p.y, p.radius, p.radius, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw lines between particles
+            const closeParticles = pocket.search(Math.max(canvas.width, canvas.height) * CONNECTION_DIST_FRACTION, p);
+            for(const p2 of closeParticles) {
+              if (p.data.id > p2.data.id) {
+                ctx.strokeStyle = `hsla(${p.data.color.h}, ${p.data.color.s}%, ${p.data.color.l}%, ${opacity})`;
+                ctx.beginPath();
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p2.x, p2.y);
+                ctx.stroke();
+              }
+            }
+
+          } else {
+            randomizeParticleState(p);
+          }
+        }
+      };
+
+      draw();
+
+    });
+
+  </script>
+
+</body>
+
+</html>
