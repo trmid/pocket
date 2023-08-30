@@ -44,10 +44,11 @@
       const CONNECTION_DIST_FRACTION = .05;
 
       // Define possible colors for particles
+      const startHue = Math.random() * 360;
       const colors = [
-        { h: Math.floor(Math.random() * 360), s: 80, l: 60 },
-        { h: Math.floor(Math.random() * 360), s: 80, l: 60 },
-        { h: Math.floor(Math.random() * 360), s: 80, l: 60 }
+        { h: Math.floor(startHue + 0), s: 80, l: 60 },
+        { h: Math.floor(startHue + 120) % 360, s: 80, l: 60 },
+        { h: Math.floor(startHue + 240) % 360, s: 80, l: 60 }
       ];
 
       // Get the canvas element and context
@@ -74,6 +75,7 @@
           y: Math.random() * canvas.height
         });
         particle.radius = 1 + Math.random() * 5;
+        particle.data.createdAt = performance.now();
         particle.data.color = colors[Math.floor(Math.random() * colors.length)];
         particle.data.vel = {
           x: Math.cos(radialDirection) * speed,
@@ -81,7 +83,7 @@
         };
       };
 
-      // Function to set up pocket & all particles
+      // Function to set up pocket & canvas
       const setup = () => {
 
         // Resize canvas
@@ -90,28 +92,6 @@
         // Create a new Pocket
         pocket = new Pocket();
 
-        // Add random particles
-        for (let i = 0; i < NUM_PARTICLES; i++) {
-
-          // Create a new particle
-          const particle = new Particle({
-            x: 0,
-            y: 0,
-            radius: 0,
-            data: {
-              id: i
-            }
-          });
-
-          // Assign random state to particle
-          randomizeParticleState(particle);
-
-          // Add to particle pocket & array
-          pocket.put(particle);
-          particles.push(particle);
-
-        }
-        console.log(particles);
       }
 
       // Call setup
@@ -129,13 +109,47 @@
 
       });
 
+      // Listen to blur/focus events to stop/start animations
+      let focused = true;
+      window.addEventListener("blur", () => {
+        focused = false;
+      });
+
+      window.addEventListener("focus", () => {
+        focused = true;
+        lastDraw = performance.now();
+      });
+
       let lastDraw = performance.now();
       const draw = () => {
         requestAnimationFrame(draw);
+        if (!focused) return;
 
         const now = performance.now();
         const deltaT = now - lastDraw;
         lastDraw = now;
+
+        // Add particles until max is reached
+        if (particles.length < NUM_PARTICLES) {
+
+          // Create a new particle
+          const particle = new Particle({
+            x: 0,
+            y: 0,
+            radius: 0,
+            data: {
+              id: particles.length - 1
+            }
+          });
+
+          // Assign random state to particle
+          randomizeParticleState(particle);
+
+          // Add to particle pocket & array
+          pocket.put(particle);
+          particles.push(particle);
+
+        }
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -181,14 +195,24 @@
             ctx.fill();
 
             // Draw lines between particles
-            const closeParticles = pocket.search(Math.max(canvas.width, canvas.height) * CONNECTION_DIST_FRACTION, p);
+            const connectionDistance = Math.max(canvas.width, canvas.height) * CONNECTION_DIST_FRACTION;
+            const closeParticles = pocket.search(connectionDistance, p);
             for(const p2 of closeParticles) {
-              if (p.data.id > p2.data.id) {
-                ctx.strokeStyle = `hsla(${p.data.color.h}, ${p.data.color.s}%, ${p.data.color.l}%, ${opacity})`;
-                ctx.beginPath();
-                ctx.moveTo(p.x, p.y);
-                ctx.lineTo(p2.x, p2.y);
-                ctx.stroke();
+              const speed1 = Math.sqrt(p.data.vel.x ** 2 + p.data.vel.y ** 2);
+              const speed2 = Math.sqrt(p2.data.vel.x ** 2 + p2.data.vel.y ** 2);
+              if (speed2 > speed1) {
+                const diff = Pocket.Tools.sub(p2, p);
+                const mag = Pocket.Tools.mag(diff);
+                if (mag > 0) {
+                  const unit = Pocket.Tools.mul(diff, 1 / mag); // unit vector
+                  const pRadial = Pocket.Tools.add(p, Pocket.Tools.mul(unit, p.radius));
+                  const p2Radial = Pocket.Tools.add(p2, Pocket.Tools.mul(unit, -p2.radius));
+                  ctx.strokeStyle = `hsla(${p.data.color.h}, ${p.data.color.s}%, ${p.data.color.l}%, ${opacity * (1 - mag / connectionDistance)})`;
+                  ctx.beginPath();
+                  ctx.moveTo(pRadial.x, pRadial.y);
+                  ctx.lineTo(p2Radial.x, p2Radial.y);
+                  ctx.stroke();
+                }
               }
             }
 

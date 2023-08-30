@@ -429,6 +429,19 @@ export class Pocket {
 Pocket.Tools = {
     MAGIC_RATIO: 2,
     /**
+     * Adds v0 to v1 and returns the new resulting vector.
+     * @param v0 Vector 0
+     * @param v1 Vector 1
+     * @returns Vector(v0 + v1)
+     */
+    add: (v0, v1) => {
+        return {
+            x: v0.x + v1.x,
+            y: v0.y + v1.y,
+            z: (v0.z || 0) + (v1.z || 0)
+        };
+    },
+    /**
      * Subracts v1 from v0 and returns the new resulting vector.
      * @param v0 Vector 0
      * @param v1 Vector 1
@@ -450,12 +463,25 @@ Pocket.Tools = {
         return Math.sqrt(v.x * v.x + v.y * v.y + (v.z || 0) * (v.z || 0));
     },
     /**
+     * Calculates the product of vector 'v' and scalar product 'a' and returns the new resulting vector.
+     * @param v Vector to multiply
+     * @param a Scalar to multiply by
+     * @returns The product of v * a
+     */
+    mul: (v, a) => {
+        return {
+            x: v.x * a,
+            y: v.y * a,
+            z: (v.z || 0) * a
+        };
+    },
+    /**
      * Calculates the commutative product of two vectors and returns the new resulting vector.
      * @param v0 Vector 0
      * @param v1 Vector 1
      * @returns The commutative product of 'v0' and 'v1'
      */
-    mul: (v0, v1) => {
+    mulComm: (v0, v1) => {
         return {
             x: v0.x * v1.x,
             y: v0.y * v1.y,
