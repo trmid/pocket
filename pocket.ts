@@ -533,7 +533,9 @@ export class Pocket<T> {
         if (!position.z) position.z = 0;
         if (this._root) {
             if (!startRadius) startRadius = this._root.radius / 100;
-            for (let r = startRadius; r < this._root.radius * 2; r *= 2) {
+            // Ensure the max radius will encompass the entire root pocket no matter where the position is located:
+            const maxRadius = (Pocket.Tools.mag(Pocket.Tools.sub(this._root.position, position)) + this._root.radius) * 2
+            for (let r = startRadius; r < maxRadius; r *= 2) {
                 const pool = this.search(r, position);
                 if (pool.size > 0) {
                     let closest: Particle<T> | undefined = undefined;

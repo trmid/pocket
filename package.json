@@ -1,6 +1,6 @@
 {
   "name": "pocket-particles",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "A simple particle manager for JavaScript that enables efficient positional queries by dynamically grouping particles into recursively smaller sub pockets.",
   "main": "pocket.js",
   "directories": {
