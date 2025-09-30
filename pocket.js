@@ -7,7 +7,7 @@ Released under the MIT License.
  * A particle object that consists of both positional data and a custom data payload.
  */
 export class Particle {
-    constructor({ x, y, z = 0, radius = 0, data }) {
+    constructor({ x, y, z = 0, radius = 0, data, }) {
         this._radius = 0;
         this._x = x;
         this._y = y;
@@ -37,7 +37,7 @@ export class Particle {
         }
     }
     /**
-     * Retrieves the particle from its pocket if it exists in one.
+     * Removes the particle from its pocket if it exists in one and returns this particle object.
      * @return `this`
      */
     retrieve() {
@@ -107,7 +107,7 @@ export class Particle {
         this.moveTo({
             x: value,
             y: this.y,
-            z: this.z
+            z: this.z,
         });
     }
     /**
@@ -118,7 +118,7 @@ export class Particle {
         this.moveTo({
             x: this.x,
             y: value,
-            z: this.z
+            z: this.z,
         });
     }
     /**
@@ -129,7 +129,7 @@ export class Particle {
         this.moveTo({
             x: this.x,
             y: this.y,
-            z: value
+            z: value,
         });
     }
     /**
@@ -155,7 +155,7 @@ export class Particle {
  * @dev SubPockets are meant for internal use only and are not optimized for external interfacing.
  */
 class SubPocket {
-    constructor({ parent, radius, position }) {
+    constructor({ parent, radius, position, }) {
         this.parent = parent;
         this.radius = radius;
         this.pocket = parent instanceof Pocket ? parent : parent.pocket;
@@ -166,13 +166,14 @@ class SubPocket {
     /**
      * Places the particle in this pocket or in a sub pocket of this pocket and returns the SubPocket it was placed in.
      * @param p The Particle to put in the SubPocket
-     * @return The particle that was placed, or undefined if the particle
+     * @return The particle that was placed, or undefined if the particle does not fit in this sub pocket.
      */
     put(p) {
         const diff = Pocket.Tools.sub(this.position, p);
         const dist = Pocket.Tools.mag(diff);
         if (dist + p.radius < this.radius) {
-            if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO || this.particles.length == 0) {
+            if (p.radius >= this.radius / Pocket.Tools.MAGIC_RATIO ||
+                this.particles.length == 0) {
                 // Add object to the pocket
                 this.particles.push(p);
                 // Set particle SubPocket
@@ -194,8 +195,8 @@ class SubPocket {
                     position: {
                         x: p.x,
                         y: p.y,
-                        z: p.z
-                    }
+                        z: p.z,
+                    },
                 });
                 this.subPockets.push(sp);
                 return sp.put(p);
@@ -213,7 +214,7 @@ class SubPocket {
      */
     retrieve(p) {
         let numParticlesBefore = this.particles.length;
-        this.particles = this.particles.filter(pp => pp != p);
+        this.particles = this.particles.filter((pp) => pp != p);
         let retrieved = numParticlesBefore > this.particles.length;
         if (retrieved) {
             this.pocket.__particleRemoved();
@@ -231,7 +232,7 @@ class SubPocket {
      */
     remove(sp) {
         let numPocketsBefore = this.subPockets.length;
-        this.subPockets = this.subPockets.filter(p => p != sp);
+        this.subPockets = this.subPockets.filter((p) => p != sp);
         let removed = numPocketsBefore > this.subPockets.length;
         if (this.subPockets.length == 0 && this.particles.length == 0) {
             this.parent.remove(this);
@@ -251,7 +252,7 @@ class SubPocket {
         const dist = Pocket.Tools.mag(diff);
         if (dist - radius < this.radius) {
             // Search this pocket's particles
-            this.particles.forEach(p => {
+            this.particles.forEach((p) => {
                 const p_pos = transform ? transform(p) : p;
                 const p_diff = Pocket.Tools.sub(p_pos, center);
                 const p_dist = Pocket.Tools.mag(p_diff);
@@ -260,7 +261,7 @@ class SubPocket {
                 }
             });
             // Search this pocket's SubPockets
-            this.subPockets.forEach(pocket => {
+            this.subPockets.forEach((pocket) => {
                 pocket.search(radius, center, set, transform);
             });
         }
@@ -290,8 +291,12 @@ export class Pocket {
         particle.__setPocket(this);
         // Try to place the Particle in the current root
         if (this._root) {
-            if (this._root.put(particle))
+            if (this._root.put(particle)) {
+                // Add 1 to particle count
+                this._count++;
+                // Return the particle
                 return particle;
+            }
         }
         // Either root does not exist, or put failed, so create a custom pocket for the particle
         const sp_radius = Pocket.Tools.MAGIC_RATIO * (particle.radius || 1);
@@ -301,19 +306,20 @@ export class Pocket {
             position: {
                 x: particle.x,
                 y: particle.y,
-                z: particle.z
-            }
+                z: particle.z,
+            },
         });
         if (!this._root) {
             this._root = sp;
         }
         else {
             // Create a new root that encompasses both the old root and new SubPocket
-            const max_dist = Pocket.Tools.mag(Pocket.Tools.sub(this._root.position, sp.position)) + sp.radius; // The distance from the current root to the outside of the new SubPocket
+            const max_dist = Pocket.Tools.mag(Pocket.Tools.sub(this._root.position, sp.position)) +
+                sp.radius; // The distance from the current root to the outside of the new SubPocket
             const new_root = new SubPocket({
                 parent: this,
                 radius: Pocket.Tools.MAGIC_RATIO * max_dist,
-                position: this._root.position
+                position: this._root.position,
             });
             // Set the parents of the old root and new SubPocket to the new root
             this._root.parent = new_root;
@@ -327,12 +333,15 @@ export class Pocket {
         if (!sp.put(particle)) {
             throw new Error("Result expected for put call...");
         }
-        // Add 1 to particle count:
+        // Add 1 to particle count
         this._count++;
+        // Return the particle
         return particle;
     }
     /**
      * Removes the root SubPocket.
+     * @dev THIS FUNCTION IS PRIMARILY FOR INTERNAL USE. If you are looking to remove a particle from the pocket,
+     * go to: `Particle.retrieve()`
      * @dev This function is designed for compatibility with `SubPocket.remove(...)`.
      * @param sp The SubPocket that requested to be removed
      * @return True if the sub pocket was found and removed, false otherwise.
@@ -381,7 +390,9 @@ export class Pocket {
             if (!startRadius)
                 startRadius = this._root.radius / 100;
             // Ensure the max radius will encompass the entire root pocket no matter where the position is located:
-            const maxRadius = (Pocket.Tools.mag(Pocket.Tools.sub(this._root.position, position)) + this._root.radius) * 2;
+            const maxRadius = (Pocket.Tools.mag(Pocket.Tools.sub(this._root.position, position)) +
+                this._root.radius) *
+                2;
             for (let r = startRadius; r < maxRadius; r *= 2) {
                 const pool = this.search(r, position);
                 if (pool.size > 0) {
@@ -440,7 +451,7 @@ Pocket.Tools = {
         return {
             x: v0.x + v1.x,
             y: v0.y + v1.y,
-            z: (v0.z || 0) + (v1.z || 0)
+            z: (v0.z || 0) + (v1.z || 0),
         };
     },
     /**
@@ -453,7 +464,7 @@ Pocket.Tools = {
         return {
             x: v0.x - v1.x,
             y: v0.y - v1.y,
-            z: (v0.z || 0) - (v1.z || 0)
+            z: (v0.z || 0) - (v1.z || 0),
         };
     },
     /**
@@ -474,7 +485,7 @@ Pocket.Tools = {
         return {
             x: v.x * a,
             y: v.y * a,
-            z: (v.z || 0) * a
+            z: (v.z || 0) * a,
         };
     },
     /**
@@ -487,7 +498,7 @@ Pocket.Tools = {
         return {
             x: v0.x * v1.x,
             y: v0.y * v1.y,
-            z: (v0.z || 0) * (v1.z || 0)
+            z: (v0.z || 0) * (v1.z || 0),
         };
-    }
+    },
 };
